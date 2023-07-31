@@ -21,7 +21,7 @@ const BASE_URL = "https://test.techclinch11.workers.dev"
  * `Options | null`. The `options` object contains information about the video quality and any other
  * custom event listeners that may have been added.
  */
-const useHls = (src: string, options: Options | null ) => {
+const useHls = (src: string, options: Options | null , token: string | null) => {
     const hls = React.useRef<Hls>(new Hls());
     const [plyrOptions, setPlyrOptions] = React.useState<Options | null>(options);
 
@@ -30,20 +30,21 @@ const useHls = (src: string, options: Options | null ) => {
         if (hls.current ) {
             hls.current.destroy();
             hls.current = new Hls({
-progressive: true,
+                // progressive: true,
 
-                fetchSetup:  function(context: LoaderContext, initParams: any) : Request{
-                    console.log(context.url)
-                    const [url, _url] = [new URL(BASE_URL), new URL(context.url)]
-                    url.pathname= _url.pathname
-                    return new Request(url)
-                }
-
-                // xhrSetup: function (xhr: XMLHttpRequest) {
-                //     console.log(xhr.responseURL)
-                //     // xhr.open('GET', )
-                //     xhr.setRequestHeader("payment", `texztaskldjsalkj`);
+                // fetchSetup:  function(context: LoaderContext, initParams: any) : Request{
+                //     const [url, _url] = [new URL(BASE_URL), new URL(context.url)]
+                //     url.pathname= _url.pathname
+                //     return new Request(url, {
+                //         headers: {
+                //             token: token || ''
+                //         }
+                //     })
                 // }
+
+                xhrSetup: function (xhr: XMLHttpRequest) {
+                    xhr.setRequestHeader("token", token || '');
+                }
             });
         }
         hls.current.loadSource(src);
@@ -56,11 +57,11 @@ progressive: true,
 
 const CustomPlyrInstance = React.forwardRef<
     APITypes,
-    PlyrProps & { hlsSource: string,  onEnded?: () => void }
+    PlyrProps & { hlsSource: string, token?: string, onEnded?: () => void }
 >((props, ref) => {
-    const { source, options = null, hlsSource,  onEnded } = props;
+    const { source, options = null, hlsSource, token= null, onEnded } = props;
     const raptorRef = usePlyr(ref, {
-        ...useHls(hlsSource, options, ),
+        ...useHls(hlsSource, options, token),
         source,
     }) as React.MutableRefObject<HTMLVideoElement>;
 
@@ -93,7 +94,7 @@ interface ICustomPlyrProps {
     onEnded?: () => void;
 }
 
-const CustomPlyr = ({ hlsSource, options = null, onEnded }: ICustomPlyrProps) => {
+const CustomPlyr = ({ hlsSource,token,  options = null, onEnded }: ICustomPlyrProps) => {
     const ref = React.useRef<APITypes>(null);
     const supported = Hls.isSupported();
     const [isClientSide, setIsClientSide] = React.useState(false);
@@ -111,6 +112,7 @@ const CustomPlyr = ({ hlsSource, options = null, onEnded }: ICustomPlyrProps) =>
             {isClientSide || supported ? (
                 <CustomPlyrInstance
                     ref={ref}
+                    token={token} 
                     source={videoSource}
                     options={options}
                     hlsSource={hlsSource}
